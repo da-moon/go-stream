@@ -54,9 +54,14 @@ var smallGolden = []hashTest{
 }
 
 func TestHashWriter(t *testing.T) {
-
+	var err error
 	buf := bytes.NewBuffer(make([]byte, 0))
-	hashWriter := stream.NewWriter(buf, stream.WithSHA256())
+	hashWriter, err := stream.NewHashWriter(
+		buf,
+		stream.WithSHA256(),
+		stream.WithMD5(),
+	)
+	assert.NoError(t, err)
 	t.Run("io.WriterImpl", func(t *testing.T) {
 		var _ io.Writer = hashWriter
 	})
@@ -65,7 +70,7 @@ func TestHashWriter(t *testing.T) {
 	for i := 0; i < len(smallGolden); i++ {
 		g := smallGolden[i]
 		t.Run("FullWrite-"+strconv.Itoa(i), func(t *testing.T) {
-			_, err := hashWriter.Write([]byte(g.in))
+			_, err = hashWriter.Write([]byte(g.in))
 			assert.NoError(t, err)
 			_, err = stdlibSha256.Write([]byte(g.in))
 			assert.NoError(t, err)
@@ -80,6 +85,15 @@ func TestHashWriter(t *testing.T) {
 					assert.NotNil(t, expected)
 					assert.Equal(t, expected, actual)
 				})
+				t.Run("MD5", func(t *testing.T) {
+					actual, err := hashWriter.Hash(stream.MD5)
+					assert.NoError(t, err)
+					assert.NotNil(t, actual)
+					expected := stdlibMD5.Sum(nil)
+					assert.NotNil(t, expected)
+					assert.Equal(t, expected, actual)
+				})
+
 			})
 			t.Run("hex", func(t *testing.T) {
 				t.Run("SHA256", func(t *testing.T) {
@@ -90,6 +104,14 @@ func TestHashWriter(t *testing.T) {
 					assert.NotZero(t, len(expected))
 					assert.Equal(t, expected, actual)
 				})
+				t.Run("MD5", func(t *testing.T) {
+					actual, err := hashWriter.HexString(stream.MD5)
+					assert.NoError(t, err)
+					assert.NotZero(t, len(actual))
+					expected := hex.EncodeToString(stdlibMD5.Sum(nil))
+					assert.NotZero(t, len(expected))
+					assert.Equal(t, expected, actual)
+				})
 			})
 			t.Run("base64", func(t *testing.T) {
 				t.Run("SHA256", func(t *testing.T) {
@@ -97,6 +119,14 @@ func TestHashWriter(t *testing.T) {
 					assert.NoError(t, err)
 					assert.NotZero(t, len(actual))
 					expected := base64.StdEncoding.EncodeToString(stdlibSha256.Sum(nil))
+					assert.NotZero(t, len(expected))
+					assert.Equal(t, expected, actual)
+				})
+				t.Run("MD5", func(t *testing.T) {
+					actual, err := hashWriter.Base64String(stream.MD5)
+					assert.NoError(t, err)
+					assert.NotZero(t, len(actual))
+					expected := base64.StdEncoding.EncodeToString(stdlibMD5.Sum(nil))
 					assert.NotZero(t, len(expected))
 					assert.Equal(t, expected, actual)
 				})
@@ -132,6 +162,14 @@ func TestHashWriter(t *testing.T) {
 						assert.NotNil(t, expected)
 						assert.Equal(t, expected, actual)
 					})
+					t.Run("MD5", func(t *testing.T) {
+						actual, err := hashWriter.Hash(stream.MD5)
+						assert.NoError(t, err)
+						assert.NotNil(t, actual)
+						expected := stdlibMD5.Sum(nil)
+						assert.NotNil(t, expected)
+						assert.Equal(t, expected, actual)
+					})
 				})
 				t.Run("hex", func(t *testing.T) {
 					t.Run("SHA256", func(t *testing.T) {
@@ -142,6 +180,14 @@ func TestHashWriter(t *testing.T) {
 						assert.NotZero(t, len(expected))
 						assert.Equal(t, expected, actual)
 					})
+					t.Run("MD5", func(t *testing.T) {
+						actual, err := hashWriter.HexString(stream.MD5)
+						assert.NoError(t, err)
+						assert.NotZero(t, len(actual))
+						expected := hex.EncodeToString(stdlibMD5.Sum(nil))
+						assert.NotZero(t, len(expected))
+						assert.Equal(t, expected, actual)
+					})
 				})
 				t.Run("base64", func(t *testing.T) {
 					t.Run("SHA256", func(t *testing.T) {
@@ -149,6 +195,14 @@ func TestHashWriter(t *testing.T) {
 						assert.NoError(t, err)
 						assert.NotZero(t, len(actual))
 						expected := base64.StdEncoding.EncodeToString(stdlibSha256.Sum(nil))
+						assert.NotZero(t, len(expected))
+						assert.Equal(t, expected, actual)
+					})
+					t.Run("MD5", func(t *testing.T) {
+						actual, err := hashWriter.Base64String(stream.MD5)
+						assert.NoError(t, err)
+						assert.NotZero(t, len(actual))
+						expected := base64.StdEncoding.EncodeToString(stdlibMD5.Sum(nil))
 						assert.NotZero(t, len(expected))
 						assert.Equal(t, expected, actual)
 					})

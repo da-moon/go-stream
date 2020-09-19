@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"hash"
 	"io"
+	"log"
+	"os"
 	"sync"
 
 	logger "github.com/da-moon/go-logger"
@@ -24,15 +26,14 @@ type HashWriter interface {
 }
 
 type hashWriter struct {
-	writer     io.Writer
-	md5Hash    hash.Hash
-	sha256Hash hash.Hash
-	hasher     map[HashAlgorithm]hash.Hash
-	logger     *logger.WrappedLogger `json:"-"`
+	writer io.Writer
+	hasher map[HashAlgorithm]hash.Hash
+	logger *logger.WrappedLogger `json:"-"`
 }
 
-// NewWriter ...
-func NewWriter(writer io.Writer, opts ...HashWriterOption) HashWriter {
+// NewHashWriter ...
+func NewHashWriter(writer io.Writer, opts ...HashWriterOption) (HashWriter, error) {
+	var err error
 	result := &hashWriter{
 		hasher: make(map[HashAlgorithm]hash.Hash),
 		writer: writer,
@@ -40,8 +41,21 @@ func NewWriter(writer io.Writer, opts ...HashWriterOption) HashWriter {
 	for _, opt := range opts {
 		opt(result)
 	}
-	// [TODO] => add safety checks
-	return result
+	if result.logger == nil {
+		l := log.New(logger.NewLevelFilter(
+			logger.WithWriter(os.Stderr),
+		), "", log.LstdFlags)
+		result.logger = logger.NewWrappedLogger(l)
+	}
+	if len(result.hasher) == 0 {
+		err = stacktrace.NewError("no underlying hash functions were provided")
+		return nil, err
+	}
+	if result.writer == nil {
+		err = stacktrace.NewError("underlying io.Writer is nil")
+		return nil, err
+	}
+	return result, nil
 }
 
 // Write writes to the underlying stream and hashes the data as it is writing it

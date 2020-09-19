@@ -4,7 +4,7 @@ import (
 	"hash"
 	"log"
 
-	// md5 "github.com/minio/md5-simd"
+	md5 "github.com/minio/md5-simd"
 	sha256 "github.com/minio/sha256-simd"
 
 	logger "github.com/da-moon/go-logger"
@@ -80,9 +80,21 @@ func WithSHA256() HashWriterOption {
 	return WithHasher(SHA256, sha256.New())
 }
 
-// // WithMD5 is a convenience method that
-// // adds md5 hashing based on minio's library.
-// func WithMD5() HashWriterOption {
-// 	return WithHasher(MD5, md5.New())
+var (
+	// used for minio md5 shasher
+	md5Server md5.Server
+	md5Hasher md5.Hasher
+)
 
-// }
+// WithMD5 is a sets up md5 hashing with minio's md5 Hasher.
+func WithMD5() HashWriterOption {
+	md5Server = md5.NewServer()
+	md5Hasher = md5Server.NewHash()
+	return WithHasher(MD5, md5Hasher)
+}
+
+// ShutdownMD5Hasher must be called when we are done with using the md5hasher
+func ShutdownMD5Hasher() {
+	md5Hasher.Close()
+	md5Server.Close()
+}
