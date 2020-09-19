@@ -56,50 +56,13 @@ func (w *hashWriter) Write(p []byte) (int, error) {
 		return -1, err
 	}
 	if n > 0 {
-		// background concurrent processing of hash jobs
-		wgErr := make(chan error)
-		wgDone := make(chan bool)
-		wg := sync.WaitGroup{}
 		for k, v := range w.hasher {
-			wg.Add(1)
-			go func(data []byte, algorithm HashAlgorithm, h hash.Hash) {
-				_, err = h.Write(p[:n])
-				if err != nil {
-					err = stacktrace.Propagate(err, "could not calculate hash of the written data for '%s' algorithm", string(algorithm))
-					wgErr <- err
-				}
-				wg.Done()
-			}(p[:n], k, v)
-			// _, err = v.Write(p[:n])
-			// if err != nil {
-			// 	err = stacktrace.Propagate(err, "could not calculate hash of the written data for '%s' algorithm", string(k))
-			// 	return -1, err
-			// }
+			_, err = v.Write(p[:n])
+			if err != nil {
+				err = stacktrace.Propagate(err, "could not calculate hash of the written data for '%s' algorithm", string(k))
+				return -1, err
+			}
 		}
-		// waits to make sure waitgroup it done
-		go func() {
-			wg.Wait()
-			close(wgDone)
-		}()
-		// blocks until a response
-		select {
-		case <-wgDone:
-			break
-		case err := <-wgErr:
-			close(wgErr)
-			return -1., err
-		}
-
-		// _, err = w.md5Hash.Write(p[:n])
-		// if err != nil {
-		// 	err = stacktrace.Propagate(err, "could not calculate md5 hash of the written data")
-		// 	return -1, err
-		// }
-		// _, err = w.sha256Hash.Write(p[:n])
-		// if err != nil {
-		// 	err = stacktrace.Propagate(err, "could not calculate sha256 hash of the written data")
-		// 	return -1, err
-		// }
 	}
 	return n, nil
 }
@@ -140,4 +103,52 @@ func (w *hashWriter) Base64String(h HashAlgorithm) (string, error) {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(res), nil
+}
+
+// WriteBackground : background concurrent processing of hash jobs
+// [TODO] => optimize allocs ... maybe it can be more performant than
+// synchronous Write
+func (w *hashWriter) writeBackground(p []byte) (int, error) {
+	var (
+		n   int
+		err error
+	)
+	n, err = w.writer.Write(p)
+	if err != nil {
+		err = stacktrace.Propagate(err, "could not write to underlying stream")
+		return -1, err
+	}
+	if n > 0 {
+		// background concurrent processing of hash jobs
+		wgErr := make(chan error)
+		wgDone := make(chan bool)
+		wg := sync.WaitGroup{}
+		for k, v := range w.hasher {
+			wg.Add(1)
+			go func(data []byte, algorithm HashAlgorithm, h hash.Hash) {
+				_, err = h.Write(p[:n])
+				if err != nil {
+					err = stacktrace.Propagate(err, "could not calculate hash of the written data for '%s' algorithm", string(algorithm))
+					wgErr <- err
+				}
+				wg.Done()
+			}(p[:n], k, v)
+
+		}
+		// waits to make sure waitgroup it done
+		go func() {
+			wg.Wait()
+			close(wgDone)
+		}()
+		// blocks until a response
+		select {
+		case <-wgDone:
+			break
+		case err := <-wgErr:
+			close(wgErr)
+			return -1., err
+		}
+
+	}
+	return n, nil
 }
