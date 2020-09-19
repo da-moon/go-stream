@@ -8,6 +8,8 @@ tasks:
       go env -w GOPRIVATE=github.com/da-moon &&
       GO111MODULE=on go get mvdan.cc/gofumpt &&
       GO111MODULE=off go get -u -v github.com/cuonglm/gocmt &&
+      GO111MODULE=off go get -u -v github.com/hankjacobs/gointerfacegen &&
+      GO111MODULE=off go get -u -v github.com/fredipevcin/ifacecodegen &&
       GO111MODULE=off go get -u -v github.com/palantir/go-compiles &&
       GO111MODULE=off go get -u -v github.com/mohae/nocomment/cmd/nocomment &&
       GO111MODULE=off go get -u -v github.com/eandre/discover/...  &&
