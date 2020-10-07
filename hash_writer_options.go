@@ -59,7 +59,7 @@ func WithWrappedLogger(arg *logger.WrappedLogger) HashWriterOption {
 func WithHasher(algorithm HashAlgorithm, hasher hash.Hash) HashWriterOption {
 	return func(s *hashWriter) error {
 
-		if len(string(algorithm)) == 0 {
+		if string(algorithm) == "" {
 			return stacktrace.NewError("an empty string was passed as hasher algorithm")
 		}
 		if hasher == nil {
